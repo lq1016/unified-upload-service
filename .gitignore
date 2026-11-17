@@ -1,0 +1,12 @@
+node_modules/
+dist/
+coverage/
+data/uploads/*
+data/chunks/*
+data/processed/*
+!data/uploads/.gitkeep
+!data/chunks/.gitkeep
+!data/processed/.gitkeep
+.env
+*.log
+vitest.config.ts.timestamp-*
