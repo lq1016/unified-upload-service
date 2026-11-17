@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>统一文件上传与图片处理服务 · 验收演示</title>
+<style>
+  :root {
+    --bg: #0b1020;
+    --panel: #131a30;
+    --panel2: #1a2340;
+    --line: #26324f;
+    --text: #e8eefc;
+    --muted: #9fb0d0;
+    --blue: #4c9aff;
+    --green: #35d39a;
+    --amber: #ffb454;
+    --red: #ff6b6b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", "Microsoft YaHei", sans-serif;
+    line-height: 1.7;
+  }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 40px 24px 80px; }
+  header.hero {
+    background: linear-gradient(135deg, #1d4ed8, #7c3aed 60%, #db2777);
+    border-radius: 18px; padding: 36px 34px; margin-bottom: 34px;
+    box-shadow: 0 18px 50px rgba(29, 78, 216, .32);
+  }
+  header.hero h1 { margin: 0 0 10px; font-size: 30px; letter-spacing: .3px; }
+  header.hero p { margin: 6px 0 0; color: #dbe6ff; font-size: 15px; }
+  .badges { margin-top: 18px; display: flex; flex-wrap: wrap; gap: 8px; }
+  .badge {
+    background: rgba(255,255,255,.16); border: 1px solid rgba(255,255,255,.28);
+    padding: 5px 13px; border-radius: 999px; font-size: 13px;
+  }
+  h2 { font-size: 21px; margin: 40px 0 14px; padding-left: 12px; border-left: 4px solid var(--blue); }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 22px 24px; margin-bottom: 16px; }
+  .card h3 { margin: 0 0 8px; font-size: 17px; }
+  .card p { margin: 6px 0; color: var(--muted); font-size: 14.5px; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; white-space: nowrap; }
+  td code, code { background: #0a0f1d; border: 1px solid var(--line); border-radius: 5px; padding: 1px 6px; font-size: 13px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .ok { color: var(--green); font-weight: 600; }
+  .bad { color: var(--red); font-weight: 600; }
+  .warn { color: var(--amber); font-weight: 600; }
+  video { width: 100%; border-radius: 12px; background: #000; display: block; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 14px; }
+  figure { margin: 0; background: var(--panel2); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+  figure img { width: 100%; display: block; }
+  figcaption { padding: 9px 12px; font-size: 13px; color: var(--muted); }
+  .steps { counter-reset: s; list-style: none; padding: 0; margin: 0; }
+  .steps li {
+    counter-increment: s; position: relative; padding: 12px 12px 12px 52px; margin-bottom: 10px;
+    background: var(--panel2); border: 1px solid var(--line); border-radius: 10px; font-size: 14.5px;
+  }
+  .steps li::before {
+    content: counter(s); position: absolute; left: 14px; top: 12px;
+    width: 26px; height: 26px; border-radius: 50%; background: var(--blue); color: #fff;
+    display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700;
+  }
+  .steps li b { color: #cfe0ff; }
+  a { color: var(--blue); }
+  .foot { margin-top: 44px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13.5px; }
+  .kv { display: grid; grid-template-columns: 150px 1fr; gap: 4px 12px; font-size: 14px; }
+  .kv b { color: var(--muted); font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="hero">
+    <h1>📦 统一文件上传与图片处理服务 · 验收演示</h1>
+    <p>Node.js 22 + TypeScript + Express + SQLite（better-sqlite3）+ Sharp · 存储层 local / S3 可切换 · 密钥全部从环境变量读取</p>
+    <div class="badges">
+      <span class="badge">9+ 接口</span>
+      <span class="badge">8 张数据表</span>
+      <span class="badge">2GB 分片 + 断点续传</span>
+      <span class="badge">魔数 / 危险文件头拦截</span>
+      <span class="badge">压缩 + 可配置水印 + 缓存</span>
+      <span class="badge">私有桶签名访问</span>
+      <span class="badge">单测 46 例 · 覆盖率 91.9%</span>
+    </div>
+  </header>
+
+  <h2>📹 3 分钟验收录屏</h2>
+  <div class="card">
+    <p>下面这段录屏即为投稿交付的 <code>docs/demo.mp4</code>（1920×1080，<b>3 分 09 秒</b>）。录制基于服务自带的单页交互界面 <code>/demo</code>，每一步都带步骤条、接口说明、聚光灯提示和解说字幕，JSON 响应在 1080p 下清晰可读。</p>
+    <video controls preload="metadata" poster="media/09-all-passed.jpg">
+      <source src="media/demo.mp4" type="video/mp4" />
+      您的浏览器不支持 video 标签，请直接下载 <a href="media/demo.mp4">media/demo.mp4</a>。
+    </video>
+    <p style="margin-top:12px">视频源文件：<a href="media/demo.mp4">media/demo.mp4</a>（5.15 MB，H.264 / 30fps）· 仓库路径 <code>docs/demo.mp4</code></p>
+  </div>
+
+  <h2>🧭 体验路径（5 步，验收标准 #10）</h2>
+  <ol class="steps">
+    <li><b>登录鉴权</b> —— <code>POST /api/auth/login</code>（user1 / Test@123456）拿到 JWT，后续请求带 <code>Authorization: Bearer &lt;token&gt;</code>，无 token 直接 401。</li>
+    <li><b>分片上传 + 断点续传</b> —— <code>init</code> → 传第 0 片 → <code>status</code> 查断点（<code>uploadedChunks:[0]</code>）→ 未补齐就 merge 返回 <b class="bad">409 CHUNKS_INCOMPLETE</b> → 补传第 1 片 → merge 成功（<code>status:"available"</code> + sha256）。演示用 1KB/2 片，服务端配置上限 <b>MAX_FILE_SIZE = 2GB</b>、默认分片 5MB。</li>
+    <li><b>非法类型拦截</b> —— 上传 MZ 头伪装成 <code>.png</code> 的文件，服务端魔数与危险文件头校验返回 <b class="bad">400 MALICIOUS_FILE</b>。</li>
+    <li><b>图片压缩 + 水印 + 缓存</b> —— <code>POST /api/images/process</code>，<code>width=600 / quality=70 / format=webp / watermark=true / watermarkText=InteMatrix / watermarkPosition=bottom-right</code>；相同参数再请求一次 <code>cached=true</code>、<code>durationMs=0</code>。</li>
+    <li><b>私有签名访问</b> —— <code>POST /api/access/sign</code> 拿签名 URL，合法签名访问 <b class="ok">200</b>，伪造 token <b class="bad">403 ACCESS_DENIED</b>。</li>
+  </ol>
+
+  <h2>🖼 录屏关键帧</h2>
+  <div class="grid">
+    <figure><img src="media/01-login.jpg" alt="登录鉴权" /><figcaption>① 登录鉴权 → HTTP 200 + 完整 JWT</figcaption></figure>
+    <figure><img src="media/03-chunks-409.jpg" alt="分片未补齐合并返回 409" /><figcaption>② 分片未补齐直接合并 → <b class="bad">409 CHUNKS_INCOMPLETE</b></figcaption></figure>
+    <figure><img src="media/04-merge-ok.jpg" alt="合并成功" /><figcaption>③ 补齐后合并 → <b class="ok">200 available</b> + sha256</figcaption></figure>
+    <figure><img src="media/05-malicious.jpg" alt="恶意文件拦截" /><figcaption>④ MZ 头伪装 .png → <b class="bad">400 MALICIOUS_FILE</b></figcaption></figure>
+    <figure><img src="media/06-compress-watermark.jpg" alt="压缩与水印" /><figcaption>⑤ 186724 → 7980 字节，压缩率 95.7%，水印在右下角</figcaption></figure>
+    <figure><img src="media/07-cache-hit.jpg" alt="缓存命中" /><figcaption>⑥ 同参再请求 → <b class="ok">cached=true</b>、耗时 0 ms</figcaption></figure>
+    <figure><img src="media/08-signature-403.jpg" alt="伪造 token 403" /><figcaption>⑦ 伪造 token 访问 → <b class="bad">403 ACCESS_DENIED</b></figcaption></figure>
+    <figure><img src="media/09-all-passed.jpg" alt="验收场景全部通过" /><figcaption>⑧ 验收场景全部通过 ✅</figcaption></figure>
+  </div>
+  <div class="card" style="margin-top:16px">
+    <h3>水印效果（服务端处理产物）</h3>
+    <p><code>docs/watermarked-demo.webp</code> —— 600×450 WebP，右下角白色 InteMatrix 水印（-20° 旋转，带描边）。</p>
+    <img src="media/watermarked-demo.webp" alt="水印效果图" style="max-width:420px;border-radius:10px;border:1px solid var(--line)" />
+  </div>
+
+  <h2>🚀 本地跑起来</h2>
+  <div class="card">
+    <div class="kv">
+      <b>启动</b><span><code>npm install &amp;&amp; npm run seed &amp;&amp; npm run build &amp;&amp; npm start</code> → http://localhost:3000</span>
+      <b>交互演示</b><span><code>http://localhost:3000/demo</code>（根路径 <code>/</code> 自动跳转）</span>
+      <b>测试账号 1</b><span><code>user1 / Test@123456</code>（普通用户）</span>
+      <b>测试账号 2</b><span><code>admin / Admin@123456</code>（管理员）</span>
+      <b>接口文档</b><span><code>docs/openapi.yaml</code>（OpenAPI 3.0）</span>
+      <b>安全规则</b><span><code>docs/SECURITY.md</code>（白名单、大小限制、恶意文件校验、签名访问逐条说明）</span>
+      <b>性能实测</b><span><code>docs/PERFORMANCE.md</code>（10MB 上传 P95 40ms、单图压缩 P95 63ms，要求分别为 3s / 500ms）</span>
+    </div>
+  </div>
+
+  <h2>✅ 验收标准对照</h2>
+  <div class="card">
+    <table>
+      <thead><tr><th>#</th><th>要求</th><th>本项目实现</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>接口 ≥ 7 个 + OpenAPI</td><td>9+ 接口（直传凭证/小文件/分片/合并/删除/图片处理/签名/日志），<code>docs/openapi.yaml</code></td></tr>
+        <tr><td>2</td><td>数据表 ≥ 5 张</td><td>8 张：files、upload_chunks、upload_sessions、business_links、access_logs、blacklist、users、processed_images；建表脚本 <code>src/db/schema.sql</code></td></tr>
+        <tr><td>3</td><td>2GB 分片 + 断点续传</td><td>MAX_FILE_SIZE=2GB，默认 5MB 分片，status 查询已传分片，合并校验完整性且幂等</td></tr>
+        <tr><td>4</td><td>安全规则</td><td>扩展名/MIME 白名单、2GB 上限、魔数与危险文件头校验、黑名单、私有桶短期签名访问，规则见 <code>docs/SECURITY.md</code></td></tr>
+        <tr><td>5</td><td>图片处理可配 + 缓存</td><td>压缩率/画质/格式可配，水印文字/位置/透明度可配，处理结果按「源文件 + 参数摘要」缓存</td></tr>
+        <tr><td>6</td><td>性能 + 覆盖率</td><td>10MB 上传 P95 <b class="ok">40ms</b>（要求 &lt;3s），单图压缩 P95 <b class="ok">63ms</b>（要求 &lt;500ms），覆盖率 <b class="ok">91.9%</b>（要求 ≥70%）</td></tr>
+        <tr><td>7</td><td>源码 + 提交历史</td><td>完整 TypeScript 源码，可 <code>npm run build</code> 编译；含提交历史；密钥仅从环境变量读取，无硬编码</td></tr>
+        <tr><td>8</td><td>README 可跑</td><td>README 含对象存储（S3 / local）配置说明与干净机器启动步骤</td></tr>
+        <tr><td>9</td><td>测试环境 + 2 个账号</td><td>本地 <code>npm start</code> 即测试环境；user1 / admin 两个账号（<code>npm run seed</code>）</td></tr>
+        <tr><td>10</td><td>3–5 步体验路径 + 3 分钟录屏</td><td><b class="ok">5 步清单 + 3 分 09 秒录屏</b>，覆盖分片上传、断点续传、非法类型拦截、压缩与水印</td></tr>
+        <tr><td>11</td><td>2 轮修改 + 7 天缺陷修复</td><td>CHANGELOG 记录 3 轮修改；验收通过后 7 天内响应修复</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="foot">
+    源码仓库：<a href="https://github.com/lq1016/unified-upload-service">https://github.com/lq1016/unified-upload-service</a><br />
+    录屏文件：<a href="https://github.com/lq1016/unified-upload-service/blob/main/docs/demo.mp4">docs/demo.mp4</a> ·
+    任务：InteMatrix 社区「文件上传与图片处理服务」（8b99630d-dcb5-4eb1-be02-fe2a319e4cc0）
+  </div>
+
+</div>
+</body>
+</html>
