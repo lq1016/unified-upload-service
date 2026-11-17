@@ -33,25 +33,51 @@ export function paramsHash(opts: ProcessOptions): string {
   return sha256(canonical);
 }
 
-function svgWatermark(text: string, opacity: number, width: number, height: number): Buffer {
+function svgWatermark(text: string, opacity: number, width: number, height: number): { buffer: Buffer; width: number; height: number } {
   const escaped = text.replace(/[<>&"']/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&apos;' })[c]!);
   const fontSize = Math.max(14, Math.round(Math.min(width, height) / 18));
-  return Buffer.from(
-    `<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">` +
-      `<text x="50%" y="50%" font-family="sans-serif" font-size="${fontSize}" fill="#ffffff" fill-opacity="${opacity}" ` +
-      `text-anchor="middle" dominant-baseline="middle" transform="rotate(-20 ${width / 2} ${height / 2})">${escaped}</text></svg>`,
+  // 只生成文字本身大小的小画布：合成时按位置显式计算 left/top，水印才会真正落在指定角落。
+  // 文字带 -20° 旋转，画布需按旋转后的外接矩形放大，否则两端会被裁掉。
+  const textW = Math.max(1, escaped.length * fontSize * 0.62);
+  const rad = (20 * Math.PI) / 180;
+  const cos = Math.cos(rad);
+  const sin = Math.sin(rad);
+  const canvasW = Math.min(width, Math.ceil(textW * cos + fontSize * sin + fontSize * 0.4));
+  const canvasH = Math.min(height, Math.ceil(textW * sin + fontSize * cos + fontSize * 0.4));
+  const buffer = Buffer.from(
+    `<svg width="${canvasW}" height="${canvasH}" xmlns="http://www.w3.org/2000/svg">` +
+      `<text x="50%" y="50%" font-family="Helvetica,Arial,sans-serif" font-size="${fontSize}" font-weight="bold" ` +
+      `stroke="#000000" stroke-opacity="${Math.min(0.55, opacity + 0.2)}" stroke-width="${Math.max(1, fontSize / 14)}" ` +
+      `paint-order="stroke" fill="#ffffff" fill-opacity="${opacity}" ` +
+      `text-anchor="middle" dominant-baseline="middle" transform="rotate(-20 ${canvasW / 2} ${canvasH / 2})">${escaped}</text></svg>`,
   );
+  return { buffer, width: canvasW, height: canvasH };
 }
 
-function gravity(pos: WatermarkPosition): string {
-  const map: Record<WatermarkPosition, string> = {
-    'top-left': 'northwest',
-    'top-right': 'northeast',
-    'bottom-left': 'southwest',
-    'bottom-right': 'southeast',
-    center: 'center',
-  };
-  return map[pos] ?? 'southeast';
+/** 计算水印小画布在目标图上的左上角坐标（带内边距） */
+function watermarkOffset(
+  pos: WatermarkPosition,
+  wmW: number,
+  wmH: number,
+  outW: number,
+  outH: number,
+  pad: number,
+): { left: number; top: number } {
+  const maxLeft = Math.max(0, outW - wmW);
+  const maxTop = Math.max(0, outH - wmH);
+  switch (pos) {
+    case 'top-left':
+      return { left: pad, top: pad };
+    case 'top-right':
+      return { left: maxLeft - pad, top: pad };
+    case 'bottom-left':
+      return { left: pad, top: maxTop - pad };
+    case 'bottom-right':
+      return { left: maxLeft - pad, top: maxTop - pad };
+    case 'center':
+    default:
+      return { left: Math.round((outW - wmW) / 2), top: Math.round((outH - wmH) / 2) };
+  }
 }
 
 export interface ProcessedImage {
@@ -96,8 +122,12 @@ export async function processImage(source: Buffer, opts: ProcessOptions = {}): P
       outW,
       outH,
     );
+    // 水印画布只包含文字本身，按位置显式计算 left/top 贴到指定角落（保留内边距，避免贴边被裁）
+    const pos = opts.watermarkPosition ?? config.image.watermarkPosition;
+    const pad = Math.max(6, Math.round(Math.min(outW, outH) * 0.04));
+    const { left, top } = watermarkOffset(pos, wm.width, wm.height, outW, outH, pad);
     base = await sharp(base)
-      .composite([{ input: wm, gravity: gravity(opts.watermarkPosition ?? config.image.watermarkPosition) as any }])
+      .composite([{ input: wm.buffer, left, top }])
       .png()
       .toBuffer();
   }
