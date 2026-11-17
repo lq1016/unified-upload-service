@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>统一文件上传与图片处理服务 · 交互演示</title>
+<style>
+  :root { color-scheme: light; --bg:#f5f7fa; --card:#fff; --line:#e3e8ef; --text:#1f2937; --sub:#6b7280; --brand:#0c79d8; --brand-d:#075ea8; --ok:#059669; --err:#dc2626; --warn:#d97706; --mono:#0b1021; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; background:var(--bg); color:var(--text); line-height:1.6; }
+  header { background:linear-gradient(135deg,#0c79d8,#075ea8); color:#fff; padding:22px 32px; box-shadow:0 2px 8px rgba(0,0,0,.12); }
+  header h1 { margin:0; font-size:22px; }
+  header p { margin:6px 0 0; opacity:.9; font-size:13px; }
+  .wrap { max-width:1180px; margin:0 auto; padding:24px; }
+  .status-bar { display:flex; gap:16px; align-items:center; flex-wrap:wrap; background:var(--card); border:1px solid var(--line); border-radius:10px; padding:12px 16px; margin-bottom:20px; }
+  .badge { display:inline-flex; align-items:center; gap:6px; font-size:13px; padding:4px 10px; border-radius:20px; background:#eef2f7; color:var(--sub); }
+  .badge.on { background:#e7f7ef; color:var(--ok); }
+  .badge.off { background:#fdecec; color:var(--err); }
+  .dot { width:8px; height:8px; border-radius:50%; background:currentColor; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(520px,1fr)); gap:18px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,.04); }
+  .card h2 { margin:0; font-size:15px; padding:14px 18px; background:#fafbfc; border-bottom:1px solid var(--line); display:flex; align-items:center; gap:10px; }
+  .card h2 .num { display:inline-flex; align-items:center; justify-content:center; width:24px; height:24px; border-radius:6px; background:var(--brand); color:#fff; font-size:12px; }
+  .card h2 .step { margin-left:auto; font-size:11px; font-weight:400; color:var(--sub); }
+  .body { padding:16px 18px; }
+  label { display:block; font-size:12px; color:var(--sub); margin:10px 0 4px; }
+  input[type=text], input[type=password], input[type=number], select, textarea {
+    width:100%; padding:8px 10px; border:1px solid var(--line); border-radius:7px; font-size:13px; font-family:inherit; background:#fff; color:var(--text);
+  }
+  input:focus, select:focus, textarea:focus { outline:2px solid rgba(12,121,216,.25); border-color:var(--brand); }
+  .row { display:flex; gap:10px; align-items:flex-end; }
+  .row > * { flex:1; min-width:0; }
+  .btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; border:0; border-radius:7px; padding:9px 16px; font-size:13px; font-weight:600; cursor:pointer; background:var(--brand); color:#fff; transition:.15s; white-space:nowrap; }
+  .btn:hover { background:var(--brand-d); }
+  .btn:disabled { background:#c3cbd5; cursor:not-allowed; }
+  .btn.ghost { background:#eef2f7; color:var(--text); }
+  .btn.ghost:hover { background:#e2e8f0; }
+  .btn.sm { padding:6px 12px; font-size:12px; }
+  .actions { display:flex; gap:8px; flex-wrap:wrap; margin-top:14px; }
+  .hint { font-size:12px; color:var(--sub); margin:10px 0 0; }
+  .resp { margin-top:14px; background:var(--mono); color:#c8e1ff; border-radius:8px; padding:12px 14px; font-family:"SF Mono",Consolas,Monaco,monospace; font-size:12px; line-height:1.55; max-height:280px; overflow:auto; white-space:pre-wrap; word-break:break-all; min-height:44px; }
+  .resp .ok { color:#6ee7a8; }
+  .resp .err { color:#ff8a8a; }
+  .resp .key { color:#8ab4f8; }
+  .filebox { border:2px dashed var(--line); border-radius:8px; padding:14px; text-align:center; color:var(--sub); font-size:13px; cursor:pointer; transition:.15s; }
+  .filebox:hover { border-color:var(--brand); color:var(--brand); background:#f5faff; }
+  .filebox input { display:none; }
+  .filebox .fname { display:block; color:var(--brand); font-weight:600; margin-top:6px; }
+  .img-preview { margin-top:12px; max-width:100%; max-height:220px; border:1px solid var(--line); border-radius:8px; display:none; }
+  .kv { display:flex; justify-content:space-between; font-size:12px; padding:5px 0; border-bottom:1px dashed var(--line); }
+  .kv:last-child { border:0; }
+  .kv b { font-weight:600; }
+  .pill { display:inline-block; padding:2px 8px; border-radius:12px; font-size:11px; font-weight:600; }
+  .pill.g { background:#e7f7ef; color:var(--ok); }
+  .pill.r { background:#fdecec; color:var(--err); }
+  .pill.y { background:#fef3e0; color:var(--warn); }
+  .chunk-track { display:flex; gap:4px; margin:10px 0; flex-wrap:wrap; }
+  .chunk { width:26px; height:26px; border-radius:5px; background:#e5e9ef; display:flex; align-items:center; justify-content:center; font-size:10px; color:var(--sub); }
+  .chunk.done { background:var(--ok); color:#fff; }
+  .chunk.active { background:var(--brand); color:#fff; }
+  .deny-banner { background:#fdecec; color:var(--err); padding:10px 14px; border-radius:8px; font-size:13px; display:none; margin-top:10px; }
+  footer { text-align:center; color:var(--sub); font-size:12px; padding:24px; }
+  .toc { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:18px; }
+  .toc a { font-size:12px; color:var(--brand); text-decoration:none; background:var(--card); border:1px solid var(--line); padding:5px 11px; border-radius:16px; }
+  .toc a:hover { background:var(--brand); color:#fff; }
+  .tiny { font-size:11px; color:var(--sub); }
+</style>
+</head>
+<body>
+<header>
+  <h1>📦 统一文件上传与图片处理服务 · 交互演示</h1>
+  <p>覆盖：小文件上传 · 2GB 分片与断点续传 · 恶意文件拦截 · 图片压缩水印缓存 · 私有签名访问 · 审计日志</p>
+</header>
+<div class="wrap">
+  <div class="status-bar">
+    <span class="badge" id="svcBadge"><span class="dot"></span>服务状态：检测中…</span>
+    <span class="badge" id="authBadge"><span class="dot"></span>未登录</span>
+    <span class="badge" id="storageBadge">存储：—</span>
+    <span style="flex:1"></span>
+    <span class="tiny">打开 <b>/api/health</b> 可看原始健康响应</span>
+  </div>
+
+  <div class="toc">
+    <a href="#s1">1 登录</a><a href="#s2">2 小文件上传</a><a href="#s3">3 分片续传</a>
+    <a href="#s4">4 恶意拦截</a><a href="#s5">5 图片处理</a><a href="#s6">6 签名访问</a><a href="#s7">7 审计日志</a>
+  </div>
+
+  <div class="grid">
+    <!-- 1 登录 -->
+    <div class="card" id="s1">
+      <h2><span class="num">1</span> 登录鉴权 <span class="step">先做这步，后续接口需要 token</span></h2>
+      <div class="body">
+        <div class="row">
+          <div><label>账号</label><input type="text" id="loginUser" value="user1" /></div>
+          <div><label>密码</label><input type="password" id="loginPass" value="Test@123456" /></div>
+        </div>
+        <div class="actions">
+          <button class="btn" onclick="doLogin()">登录获取 JWT</button>
+          <button class="btn ghost sm" onclick="fillAdmin()">填入 admin 账号</button>
+        </div>
+        <div class="resp" id="respLogin">点「登录获取 JWT」开始…</div>
+      </div>
+    </div>
+
+    <!-- 2 小文件上传 -->
+    <div class="card" id="s2">
+      <h2><span class="num">2</span> 小文件上传 <span class="step">直传 + 魔数校验 + sha256</span></h2>
+      <div class="body">
+        <label>选择图片（png/jpg/webp/gif/pdf）</label>
+        <div class="filebox" onclick="document.getElementById('smallFile').click()">
+          点击选择文件
+          <input type="file" id="smallFile" accept=".png,.jpg,.jpeg,.webp,.gif,.pdf" onchange="onSmallFile(this)" />
+          <span class="fname" id="smallName">未选择</span>
+        </div>
+        <div class="actions"><button class="btn" id="btnSmall" onclick="uploadSmall()" disabled>上传文件</button></div>
+        <div class="resp" id="respSmall">选择文件后点击上传…</div>
+      </div>
+    </div>
+
+    <!-- 3 分片续传 -->
+    <div class="card" id="s3">
+      <h2><span class="num">3</span> 分片上传 + 断点续传 <span class="step">演示 1KB/2 片，配置上限 2GB</span></h2>
+      <div class="body">
+        <div class="row">
+          <div><label>文件大小（字节）</label><input type="number" id="mpSize" value="1024" /></div>
+          <div><label>分片大小（字节）</label><input type="number" id="mpChunk" value="512" /></div>
+        </div>
+        <div class="chunk-track" id="chunkTrack"></div>
+        <div class="actions">
+          <button class="btn sm" onclick="mpInit()">① 初始化</button>
+          <button class="btn sm" onclick="mpUploadChunk(0)" disabled id="btnC0">② 传第0片</button>
+          <button class="btn sm" onclick="mpStatus()" disabled id="btnStatus">③ 查断点状态</button>
+          <button class="btn sm" onclick="mpUploadChunk(1)" disabled id="btnC1">④ 补传第1片</button>
+          <button class="btn sm" onclick="mpMerge()" disabled id="btnMerge">⑤ 合并</button>
+        </div>
+        <div class="resp" id="respMp">点「初始化」开始分片演示…</div>
+      </div>
+    </div>
+
+    <!-- 4 恶意拦截 -->
+    <div class="card" id="s4">
+      <h2><span class="num">4</span> 恶意文件拦截 <span class="step">MZ 头伪装成 .png</span></h2>
+      <div class="body">
+        <p class="hint">生成一个内容为 Windows 可执行文件头（MZ）、但扩展名为 .png 的文件并上传，服务应返回 <b>MALICIOUS_FILE</b>。</p>
+        <div class="actions"><button class="btn" onclick="uploadEvil()">生成并上传伪装文件</button></div>
+        <div class="deny-banner" id="denyBanner">🚫 已被安全守卫拦截（MALICIOUS_FILE）</div>
+        <div class="resp" id="respEvil">点按钮测试拦截…</div>
+      </div>
+    </div>
+
+    <!-- 5 图片处理 -->
+    <div class="card" id="s5">
+      <h2><span class="num">5</span> 图片压缩 + 水印 + 缓存 <span class="step">需先在步骤2上传一张图片</span></h2>
+      <div class="body">
+        <label>fileId（上传成功后自动填入）</label>
+        <input type="text" id="imgFileId" placeholder="f_xxx" />
+        <div class="row">
+          <div><label>宽度</label><input type="number" id="imgWidth" value="600" /></div>
+          <div><label>画质 1-100</label><input type="number" id="imgQuality" value="70" /></div>
+          <div><label>格式</label><select id="imgFormat"><option>webp</option><option>jpeg</option><option>png</option></select></div>
+        </div>
+        <div class="row">
+          <div><label>水印文字</label><input type="text" id="wmText" value="InteMatrix" /></div>
+          <div><label>水印位置</label><select id="wmPos"><option>bottom-right</option><option>bottom-left</option><option>top-right</option><option>top-left</option><option>center</option></select></div>
+        </div>
+        <label><input type="checkbox" id="wmOn" checked style="width:auto;margin-right:6px" /> 启用水印</label>
+        <div class="actions">
+          <button class="btn" onclick="processImage(false)">处理图片</button>
+          <button class="btn ghost" onclick="processImage(true)">再处理一次（测缓存）</button>
+        </div>
+        <div id="imgStats" style="margin-top:12px"></div>
+        <img class="img-preview" id="imgPreview" alt="处理后预览" />
+        <div class="resp" id="respImg">填写 fileId 后点击处理…</div>
+      </div>
+    </div>
+
+    <!-- 6 签名访问 -->
+    <div class="card" id="s6">
+      <h2><span class="num">6</span> 私有签名访问 <span class="step">合法 200 / 伪造 403</span></h2>
+      <div class="body">
+        <label>fileId（步骤2上传后自动填入）</label>
+        <input type="text" id="signFileId" placeholder="f_xxx" />
+        <div class="actions">
+          <button class="btn" onclick="signAccess()">生成签名 URL</button>
+          <button class="btn ghost" onclick="accessWithBadToken()">用伪造 token 访问</button>
+        </div>
+        <div id="signUrl" class="tiny" style="margin-top:10px;word-break:break-all"></div>
+        <div class="resp" id="respSign">点「生成签名 URL」开始…</div>
+      </div>
+    </div>
+
+    <!-- 7 日志 -->
+    <div class="card" id="s7">
+      <h2><span class="num">7</span> 访问审计日志 <span class="step">sign / access / deny 全部记录</span></h2>
+      <div class="body">
+        <div class="actions" style="margin-top:0"><button class="btn ghost" onclick="loadLogs()">刷新日志</button></div>
+        <div class="resp" id="respLogs">点「刷新日志」查看…</div>
+      </div>
+    </div>
+  </div>
+  <footer>统一文件上传与图片处理服务 · 单页交互演示 · 测试账号密码仅本地演示用</footer>
+</div>
+
+<script>
+const API = location.origin + '/api';
+let TOKEN = '';
+let SMALL_FILE = null;
+let LAST_FILE_ID = '';
+let MP = { uploadId:'', totalChunks:0, uploaded:[] };
+let LAST_IMG_B64 = '';
+
+function el(id){ return document.getElementById(id); }
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function fmt(resp, box){
+  const ok = resp.ok;
+  const head = `<span class="${ok?'ok':'err'}">${ok?'✓ 成功':'✗ 失败'}</span>  HTTP ${resp.status}`;
+  el(box).innerHTML = head + '\n' + esc(JSON.stringify(resp.body, null, 2));
+}
+function needLogin(){
+  if(!TOKEN){ alert('请先完成第 1 步登录'); return false; }
+  return true;
+}
+async function req(path, opts={}){
+  opts.headers = opts.headers || {};
+  if(TOKEN) opts.headers['Authorization'] = 'Bearer ' + TOKEN;
+  try{
+    const r = await fetch(API + path, opts);
+    let body; const ct = r.headers.get('content-type') || '';
+    if(ct.includes('application/json')) body = await r.json();
+    else body = await r.text();
+    return { ok:r.ok, status:r.status, body };
+  }catch(e){ return { ok:false, status:0, body:{ error:{ code:'NETWORK', message:String(e) } } }; }
+}
+function json(body){ return { 'Content-Type':'application/json', body:JSON.stringify(body) }; }
+
+async function checkHealth(){
+  const r = await req('/health');
+  const ok = r.ok;
+  el('svcBadge').className = 'badge ' + (ok?'on':'off');
+  el('svcBadge').innerHTML = `<span class="dot"></span>服务状态：${ok?'正常':'异常'}`;
+  if(ok && r.body.data) el('storageBadge').textContent = '存储：' + (r.body.data.storage || '—');
+}
+checkHealth();
+
+function fillAdmin(){ el('loginUser').value='admin'; el('loginPass').value='Admin@123456'; }
+async function doLogin(){
+  const r = await req('/auth/login', { method:'POST', ...json({ username:el('loginUser').value, password:el('loginPass').value }) });
+  fmt(r,'respLogin');
+  if(r.ok && r.body.data){
+    TOKEN = r.body.data.token;
+    el('authBadge').className='badge on';
+    el('authBadge').innerHTML = '<span class="dot"></span>已登录：' + esc(r.body.data.user.username);
+  } else {
+    TOKEN=''; el('authBadge').className='badge off'; el('authBadge').innerHTML='<span class="dot"></span>未登录';
+  }
+}
+
+function onSmallFile(input){
+  SMALL_FILE = input.files[0] || null;
+  el('smallName').textContent = SMALL_FILE ? `${SMALL_FILE.name} (${SMALL_FILE.size} 字节)` : '未选择';
+  el('btnSmall').disabled = !SMALL_FILE;
+}
+async function uploadSmall(){
+  if(!needLogin() || !SMALL_FILE) return;
+  const fd = new FormData(); fd.append('file', SMALL_FILE);
+  const r = await req('/upload/small', { method:'POST', body:fd });
+  fmt(r,'respSmall');
+  if(r.ok && r.body.data){
+    LAST_FILE_ID = r.body.data.id;
+    el('imgFileId').value = LAST_FILE_ID;
+    el('signFileId').value = LAST_FILE_ID;
+  }
+}
+
+async function mpInit(){
+  if(!needLogin()) return;
+  const size=+el('mpSize').value, chunkSize=+el('mpChunk').value;
+  const r = await req('/upload/multipart/init', { method:'POST', ...json({ originalName:'big.bin', mimeType:'application/octet-stream', size, chunkSize }) });
+  fmt(r,'respMp');
+  if(r.ok && r.body.data){
+    MP.uploadId=r.body.data.uploadId; MP.totalChunks=r.body.data.totalChunks; MP.uploaded=[];
+    renderChunks();
+    ['btnC0'].forEach(x=>el(x).disabled=false);
+    el('btnStatus').disabled=false;
+    // 如果多于 2 片，只演示前 2 片 + 状态
+    el('btnC1').disabled = MP.totalChunks < 2;
+  }
+}
+function renderChunks(){
+  const n = Math.min(MP.totalChunks, 20);
+  el('chunkTrack').innerHTML = Array.from({length:n},(_,i)=>`<div class="chunk ${MP.uploaded.includes(i)?'done':''}">${i}</div>`).join('') + (MP.totalChunks>20?`<span class="tiny">…共${MP.totalChunks}片</span>`:'');
+}
+async function makeChunkBlob(index){
+  const size=+el('mpSize').value, chunkSize=+el('mpChunk').value;
+  const len = Math.min(chunkSize, size - index*chunkSize);
+  return new Blob([new Uint8Array(Math.max(len,0)).fill(65+index)], {type:'application/octet-stream'});
+}
+async function mpUploadChunk(index){
+  if(!needLogin()) return;
+  const fd = new FormData(); fd.append('chunk', await makeChunkBlob(index), `${index}.part`);
+  const r = await req(`/upload/multipart/${MP.uploadId}/chunk/${index}`, { method:'PUT', body:fd });
+  fmt(r,'respMp');
+  if(r.ok){ if(!MP.uploaded.includes(index)) MP.uploaded.push(index); renderChunks(); el('btnMerge').disabled=false; if(index===0) el('btnC1').disabled=false; }
+}
+async function mpStatus(){
+  if(!needLogin()) return;
+  const r = await req(`/upload/multipart/${MP.uploadId}/status`);
+  fmt(r,'respMp');
+  if(r.ok && r.body.data){
+    MP.uploaded = r.body.data.uploadedChunks || []; renderChunks();
+    el('btnMerge').disabled = MP.uploaded.length < MP.totalChunks;
+  }
+}
+async function mpMerge(){
+  if(!needLogin()) return;
+  const r = await req(`/upload/multipart/${MP.uploadId}/merge`, { method:'POST' });
+  fmt(r,'respMp');
+  if(r.ok) renderChunks();
+}
+
+async function uploadEvil(){
+  if(!needLogin()) return;
+  const bytes = new Uint8Array([0x4d,0x5a,0x90,0x00]);
+  const txt = new TextEncoder().encode('malware');
+  const buf = new Uint8Array(bytes.length+txt.length); buf.set(bytes); buf.set(txt, bytes.length);
+  const fd = new FormData(); fd.append('file', new Blob([buf],{type:'image/png'}), 'evil.png');
+  const r = await req('/upload/small', { method:'POST', body:fd });
+  fmt(r,'respEvil');
+  const denied = !r.ok && r.body?.error?.code === 'MALICIOUS_FILE';
+  el('denyBanner').style.display = denied ? 'block' : 'none';
+}
+
+async function processImage(again){
+  if(!needLogin()) return;
+  const fileId = el('imgFileId').value.trim();
+  if(!fileId){ alert('请先上传一张图片（步骤2），或手动填入 fileId'); return; }
+  const payload = {
+    fileId, width:+el('imgWidth').value||undefined, quality:+el('imgQuality').value||undefined,
+    format:el('imgFormat').value,
+    watermark:el('wmOn').checked, watermarkText:el('wmText').value, watermarkPosition:el('wmPos').value,
+  };
+  const r = await req('/images/process', { method:'POST', ...json(payload) });
+  // 展示时去掉 base64（太长），单独画图
+  const view = { ...r.body };
+  if(view.data && view.data.base64){ LAST_IMG_B64 = view.data.base64; delete view.data.base64; view.data.base64='<已省略，见下方预览>'; }
+  fmt({ok:r.ok,status:r.status,body:view},'respImg');
+  if(r.ok && r.body.data){
+    const d = r.body.data;
+    const rate = (d.compressionRate*100).toFixed(1);
+    el('imgStats').innerHTML = `
+      <div class="kv"><span>处理结果</span><b><span class="pill ${d.cached?'y':'g'}">${d.cached?'缓存命中 CACHE HIT':'首次处理 MISS'}</span></b></div>
+      <div class="kv"><span>压缩率</span><b>${rate}%</b></div>
+      <div class="kv"><span>原大小 → 处理后</span><b>${d.originalSize} → ${d.processedSize} 字节</b></div>
+      <div class="kv"><span>耗时</span><b>${d.durationMs} ms</b></div>
+      <div class="kv"><span>格式 / 尺寸</span><b>${d.format} · ${d.width}×${d.height}</b></div>`;
+    if(LAST_IMG_B64 && d.mimeType){
+      const img = el('imgPreview');
+      img.src = `data:${d.mimeType};base64,${LAST_IMG_B64}`;
+      img.style.display='block';
+    }
+  }
+}
+
+async function signAccess(){
+  if(!needLogin()) return;
+  const fileId = el('signFileId').value.trim();
+  if(!fileId){ alert('请先上传一张图片（步骤2），或手动填入 fileId'); return; }
+  const r = await req('/access/sign', { method:'POST', ...json({ fileId }) });
+  fmt(r,'respSign');
+  if(r.ok && r.body.data){
+    const url = r.body.data.url;
+    el('signUrl').innerHTML = '签名 URL：<b>' + esc(url) + '</b>';
+    const ar = await req(url);
+    fmt({ok:ar.ok,status:ar.status,body:{note:'合法签名访问结果',contentType:ar.status===200?'文件二进制（已成功返回）':ar.body}},'respSign');
+  }
+}
+async function accessWithBadToken(){
+  const fileId = el('signFileId').value.trim();
+  if(!fileId){ alert('请先填入 fileId'); return; }
+  const r = await req(`/access/file?fileId=${encodeURIComponent(fileId)}&token=bad`);
+  fmt(r,'respSign');
+}
+
+async function loadLogs(){
+  if(!needLogin()) return;
+  const r = await req('/access/logs');
+  fmt(r,'respLogs');
+}
+</script>
+</body>
+</html>

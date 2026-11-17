@@ -3,6 +3,7 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import config from './config/index.js';
 import { apiRouter } from './routes/index.js';
+import { demoRouter } from './routes/demo.js';
 import { migrate } from './db/migrate.js';
 import { HttpError, fail } from './utils/index.js';
 
@@ -21,6 +22,12 @@ export function createApp(): express.Express {
   app.use('/api/auth/login', loginLimiter);
 
   app.use('/api', apiRouter);
+
+  // 单页 UI demo（浏览器访问 /demo）
+  app.use('/demo', demoRouter);
+
+  // 根路径重定向到 demo
+  app.get('/', (_req, res) => res.redirect('/demo'));
 
   // 全局 404
   app.use((_req, res) => fail(res, 404, '接口不存在', 'NOT_FOUND'));
