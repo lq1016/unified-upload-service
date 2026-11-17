@@ -10,87 +10,81 @@
 | 运行环境 | Node.js v22.23.4 / Linux aarch64 / npm 10.9.9 |
 | 测试框架 | Vitest v2.1.9 + supertest + v8 coverage |
 | 编译 | `npm run build` 通过（TypeScript 严格模式，0 错误） |
-| 测试文件 | 1 个（`tests/api.test.ts`） |
-| 测试用例 | **15 个，全部通过（15 passed / 0 failed）** |
-| 总耗时 | 1.83s（测试本体 240ms） |
-| 语句覆盖率 | **87.08%**（阈值 70%）✅ |
-| 分支覆盖率 | 65.63%（阈值 65%）✅ |
-| 函数覆盖率 | 81.94%（阈值 70%）✅ |
-| 行覆盖率 | **87.08%**（阈值 70%）✅ |
+| 测试文件 | 2 个（`tests/api.test.ts` 接口测试、`tests/unit.test.ts` 单元/分支测试） |
+| 测试用例 | **43 个，全部通过（43 passed / 0 failed）** |
+| 总耗时 | 2.01s |
+| 语句覆盖率 | **92.57%**（阈值 70%）✅ |
+| 分支覆盖率 | **79.85%**（阈值 65%）✅ |
+| 函数覆盖率 | **95.83%**（阈值 70%）✅ |
+| 行覆盖率 | **92.57%**（阈值 70%）✅ |
 
-## 2. 验收标准对照
+## 2. 覆盖率提升（第二轮补测）
+
+| 指标 | 补测前 | 补测后 | 变化 |
+| --- | --- | --- | --- |
+| 语句/行 | 87.08% | **92.57%** | +5.49 |
+| 分支 | 65.63%（刚过阈值） | **79.85%** | +14.22 |
+| 函数 | 81.94% | **95.83%** | +13.89 |
+| 用例数 | 15 | **43** | +28 |
+
+补测重点：图片处理全格式（webp/jpeg/png）、5 种水印位置、压缩比 clamp 边界、所有魔数类型与危险文件头、JWT/签名 token 篡改与过期、LocalStorage 全方法、直传凭证回调闭环、参数校验异常分支。
+
+**过程中发现并修复真实缺陷**：本地直传回调 URL 缺少 `/upload` 路由前缀（`/api/internal/direct-put` → `/api/upload/internal/direct-put`），补测前直传落地功能不可用；已修复并加入回归测试。
+
+## 3. 验收标准对照
 
 | 验收项 | 对应测试用例 / 证据 | 结果 |
 | --- | --- | --- |
-| 接口 ≥7 个 | 测试中覆盖直传凭证、小文件、分片 init/片/状态/合并、删除、图片处理、签名访问、日志等 | ✅ |
-| 大文件分片 + 断点续传 | `init -> 上传分片 -> 查询状态 -> 合并`、`重复合并幂等` | ✅ |
-| 安全：类型白名单/大小/恶意文件 | `拦截可执行文件伪装（MZ 头）`、`拦截不在白名单的扩展名`、`拦截魔数与声明类型不符`、`拒绝超限大小` | ✅ |
-| 安全：私有桶签名访问 | `签名 URL 有效访问、错误 token 被拒绝` | ✅ |
-| 图片处理：压缩/水印/缓存 | `压缩+水印，第二次命中缓存`（含 cached=true、durationMs=0、hit_count 校验） | ✅ |
-| 性能：单测覆盖率 ≥70% | 87.08%（见第 4 节） | ✅ |
+| 接口 ≥7 个 | 测试覆盖直传凭证、小文件、分片 init/片/状态/合并、删除、图片处理、签名访问、日志等全部接口 | ✅ |
+| 大文件分片 + 断点续传 | `init -> 上传分片 -> 查询状态 -> 合并`、`重复合并幂等`、`分片越界`、`会话不存在` | ✅ |
+| 安全：类型白名单/大小/恶意文件 | 各魔数类型、`拦截可执行文件伪装`、`拦截非法扩展名`、`魔数不符`、`ELF/shebang/PHP/HTML/script 危险头`、`黑名单`、`空文件`、`超限` | ✅ |
+| 安全：私有桶签名访问 | `签名 URL 有效访问、错误 token 被拒绝`、`token 绑定 fileId/篡改/过期` | ✅ |
+| 图片处理：压缩/水印/缓存 | `压缩+水印，第二次命中缓存`、`全格式`、`全水印位置`、`压缩比边界`、`非图片处理 400` | ✅ |
+| 性能：单测覆盖率 ≥70% | 92.57%（见第 5 节） | ✅ |
 
-## 3. 测试用例明细（15 个，全部通过）
+## 4. 测试用例分组
 
-### 健康检查与鉴权（3）
-1. `GET /api/health 返回 ok` — 健康接口返回 200、status=ok。
-2. `无令牌访问受保护接口返回 401` — 未带 Bearer token 访问 `/api/upload/files` 返回 401 / UNAUTHORIZED。
-3. `错误密码登录失败` — 正确用户名 + 错误密码返回 401。
+### tests/api.test.ts — 接口测试（15 个）
+健康检查与鉴权（3）、小文件上传与安全校验（4）、直传凭证（2）、分片上传与断点续传（2）、图片处理与缓存（2）、私有桶签名访问与审计（1）、业务关联与删除（1）。
 
-### 小文件上传与安全校验（4）
-4. `上传合法 PNG 成功` — 201，状态 available，checksum 为 64 位 sha256。
-5. `拦截可执行文件伪装（MZ 头）` — .png 扩展名但内容 MZ 头，返回 400 / MALICIOUS_FILE。
-6. `拦截不在白名单的扩展名` — .exe 返回 400 / EXT_NOT_ALLOWED。
-7. `拦截魔数与声明类型不符` — 非 PNG 内容声明 image/png，返回 400 / MAGIC_MISMATCH。
+### tests/unit.test.ts — 单元/分支测试（28 个）
+- 图片处理：jpeg/png/webp 全格式、缺省格式、compressionRatio 缩放与 clamp、5 种水印位置与特殊字符转义、无效图片抛错、paramsHash/newProcessedKey/contentDisposition（8）
+- 文件守卫：jpeg/webp/gif/pdf 魔数、ELF/shebang/PHP/HTML/script 危险头、非法 MIME、空文件、黑名单、safeObjectKey（6）
+- JWT/密码/签名边界：token 篡改、过期、签名访问绑定 fileId、密码错误格式（4）
+- 存储与工具：LocalStorage 全方法、路径穿越拒绝、setStorage 注入、HttpError/ok/fail/sha256（5）
+- 直传回调与接口分支：token 一次性/过期、无效 token 400、直传凭证闭环落地、文件不存在 404、参数校验异常、分片越界、会话不存在（7）
 
-### 直传凭证（2）
-8. `签发直传凭证` — 返回 uploadUrl、fileId、objectKey。
-9. `拒绝超限大小` — size=3GB 超过 2GB 上限，返回 400。
-
-### 分片上传与断点续传（2）
-10. `init -> 上传分片 -> 查询状态 -> 合并` — 2 片文件，先传第 0 片，status 返回 uploadedChunks=[0]，未齐时合并返回 409，补齐后合并成功、checksum 一致。
-11. `重复合并幂等` — 二次 merge 返回相同 checksum，不重复拼接。
-
-### 图片处理与缓存（2）
-12. `压缩+水印，第二次命中缓存` — 首次 cached=false、处理后体积小于原图；二次 cached=true、durationMs=0；缓存表 hit_count=1。
-13. `非图片文件处理返回 400` — 二进制文件走图片处理返回 400 / NOT_AN_IMAGE。
-
-### 私有桶签名访问与审计（1）
-14. `签名 URL 有效访问、错误 token 被拒绝` — 合法签名返回 200 且 Content-Type 正确；伪造 token 返回 403；日志表记录 deny 动作。
-
-### 业务关联与删除（1）
-15. `关联业务并删除文件` — 关联 avatar/u1 成功，删除后文件列表不再包含该文件。
-
-## 4. 覆盖率明细（v8）
+## 5. 覆盖率明细（v8，补测后）
 
 | 模块 | 语句 | 分支 | 函数 | 行 |
 | --- | --- | --- | --- | --- |
-| 全部 | 87.08 | 65.63 | 81.94 | 87.08 |
+| 全部 | 92.57 | 79.85 | 95.83 | 92.57 |
 | app.ts | 84 | 50 | 100 | 84 |
 | config/index.ts | 76.31 | 58.33 | 100 | 76.31 |
 | db/index.ts | 57.69 | 100 | 33.33 | 57.69 |
 | db/migrate.ts | 77.77 | 50 | 100 | 77.77 |
-| image/process.ts | 88.54 | 23.8 | 83.33 | 88.54 |
+| image/process.ts | 100 | 76.47 | 100 | 100 |
 | middleware/auth.ts | 85 | 87.5 | 100 | 85 |
-| routes/index.ts | 92.59 | 59.09 | 100 | 92.59 |
-| routes/upload.ts | 77.46 | 56 | 33.33 | 77.46 |
-| security/fileguard.ts | 85.18 | 80 | 50 | 85.18 |
-| security/jwt.ts | 93.44 | 66.66 | 100 | 93.44 |
-| security/password.ts | 88.88 | 50 | 100 | 88.88 |
-| services/fileService.ts | 95.41 | 67.5 | 92.3 | 95.41 |
+| routes/index.ts | 92.59 | 75 | 100 | 92.59 |
+| routes/upload.ts | 95.77 | 68.42 | 100 | 95.77 |
+| security/fileguard.ts | 96.29 | 93.1 | 100 | 96.29 |
+| security/jwt.ts | 93.44 | 85.71 | 100 | 93.44 |
+| security/password.ts | 88.88 | 85.71 | 100 | 88.88 |
+| services/fileService.ts | 95.41 | 76.74 | 92.3 | 95.41 |
 | services/imageService.ts | 100 | 87.5 | 100 | 100 |
-| storage/index.ts | 80 | 80 | 50 | 80 |
-| storage/local.ts | 86.56 | 75 | 83.33 | 86.56 |
+| storage/index.ts | 100 | 85.71 | 100 | 100 |
+| storage/local.ts | 95.52 | 90 | 100 | 95.52 |
 | utils/index.ts | 100 | 100 | 100 | 100 |
 
 说明：`src/storage/s3.ts`（需真实 S3 环境）与 `src/index.ts`（服务启动入口）按配置排除出覆盖率统计；`interface.ts` 为纯类型定义无可执行语句。
 
-## 5. 复现命令
+## 6. 复现命令
 
 ```bash
 cd /Users/liuqiang/claudeProjects/intematrix/unified-upload-service
 npm install
-npm test          # 15 个测试 + 覆盖率
+npm test          # 43 个测试 + 覆盖率
 npm run build     # 编译验证
 ```
 
-> 提示：覆盖率报告输出到 `/tmp/intematrix-coverage`（避开部分文件系统对临时文件删除的限制），HTML 报告可用浏览器打开 `/tmp/intematrix-coverage/index.html` 查看逐行覆盖情况。
+> 覆盖率报告输出到 `/tmp/intematrix-coverage`，HTML 报告可用浏览器打开 `/tmp/intematrix-coverage/index.html` 查看逐行覆盖情况。

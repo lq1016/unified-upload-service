@@ -65,7 +65,7 @@ uploadRouter.post('/direct-credentials', auth, asyncHandler(async (req, res) => 
   const presign = await getStorage().presignPut(objectKey, mimeType, 300);
   if (getStorage().name === 'local') {
     const token = issueDirectToken(objectKey, mimeType);
-    presign.url = `/api/internal/direct-put?token=${token}`;
+    presign.url = `/api/upload/internal/direct-put?token=${token}`;
   }
   // 预建 file 记录（等待客户端回调确认）
   const file = createFile({ originalName, mimeType, size, uploadType: 'direct', ownerId: req.user!.sub, objectKey });

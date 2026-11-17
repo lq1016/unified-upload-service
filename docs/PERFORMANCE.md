@@ -48,7 +48,7 @@ P95:  63 ms   (验收要求 < 500 ms)  ✅ 通过
 ## 4. 测试覆盖
 
 ```
-Test Files: 1 passed (15 tests)
-Statements: 87%  |  Branches: 65%  |  Functions: 82%  |  Lines: 87%
+Test Files: 2 passed (43 tests)
+Statements: 92.6%  |  Branches: 79.9%  |  Functions: 95.8%  |  Lines: 92.6%
 阈值: 70%  ✅ 通过
 ```

@@ -11,7 +11,7 @@
 | 3. 2GB 分片 + 断点续传 | `MAX_FILE_SIZE=2147483648`；init→逐片上传→status 查询已传分片→merge；实测见 [`docs/PERFORMANCE.md`](docs/PERFORMANCE.md) |
 | 4. 安全 | 扩展名/MIME 白名单、大小限制、魔数+危险文件头校验、黑名单、私有签名访问、JWT、限流、Helmet；规则见 [`docs/SECURITY.md`](docs/SECURITY.md) |
 | 5. 图片处理 | 画质/尺寸/压缩率可配，水印文字/位置/透明度可配，处理结果按「源文件+参数摘要」缓存 |
-| 6. 性能与覆盖率 | 10MB P95 < 3s、单图压缩 < 500ms（实测见 PERFORMANCE.md）；单测覆盖率 87%（`npm test`，阈值 70%） |
+| 6. 性能与覆盖率 | 10MB P95 < 3s、单图压缩 < 500ms（实测见 PERFORMANCE.md）；单测覆盖率 92.57%（`npm test`，阈值 70%） |
 | 7. 源码与提交历史 | 完整 TypeScript 源码，git 仓库含多次提交；密钥全部从环境变量读取，无硬编码；附建表脚本 |
 | 8. 可运行 | `npm install && npm run build && npm run seed && npm start`；README 含对象存储配置说明 |
 | 9. 可体验 | 测试环境 + 2 个测试账号 |
@@ -123,11 +123,11 @@ SIGNED_URL_TTL=300
 ## 测试
 
 ```bash
-npm test          # 运行 15 个接口测试 + 覆盖率（阈值 70%）
+npm test          # 运行 43 个测试（接口+单元）+ 覆盖率（阈值 70%）
 npm run build     # TypeScript 编译
 ```
 
-测试覆盖：鉴权、白名单/魔数/恶意文件拦截、直传凭证、分片上传与断点续传、合并幂等、图片处理与缓存命中、私有签名访问、业务关联与删除。详细结果（15 个用例明细 + 覆盖率表）见 [`docs/TEST_REPORT.md`](docs/TEST_REPORT.md)。
+测试覆盖：鉴权、白名单/魔数/恶意文件拦截、直传凭证、分片上传与断点续传、合并幂等、图片处理各格式与水印、缓存命中、私有签名访问、业务关联与删除。详细结果（43 个用例明细 + 覆盖率表）见 [`docs/TEST_REPORT.md`](docs/TEST_REPORT.md)。
 
 ## 目录结构
 

@@ -69,11 +69,11 @@ export class LocalStorage implements StorageDriver {
     return { key: targetKey, size: fs.statSync(dest).size };
   }
 
-  /** 本地驱动用回调式上传 URL：返回 /api/internal/direct-put?token=... */
+  /** 本地驱动用回调式上传 URL：返回 /api/upload/internal/direct-put?token=...（路由挂载于 /api/upload） */
   async presignPut(key: string, contentType: string, expiresIn: number): Promise<PresignedPut> {
-    // 使用短期签名 token（在 routes 中由 signDirectToken 生成并注入 url）
+    // 使用短期签名 token（在 routes 中由 issueDirectToken 生成并注入 url）
     return {
-      url: `/api/internal/direct-put?key=${encodeURIComponent(key)}&expiresIn=${expiresIn}`,
+      url: `/api/upload/internal/direct-put?key=${encodeURIComponent(key)}&expiresIn=${expiresIn}`,
       method: 'PUT',
       headers: { 'Content-Type': contentType },
       expiresIn,
